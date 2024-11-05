@@ -1,0 +1,340 @@
+#include "TSHMSPrimaryGeneratorAction.hh"
+#include "TSHMSDetectorConstruction.hh"
+
+#include "G4Event.hh"
+#include "G4ParticleGun.hh"
+#include "G4ParticleTable.hh"
+#include "G4ParticleDefinition.hh"
+#include "globals.hh"
+#include "CLHEP/Random/RandFlat.h"
+
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <iomanip>
+
+using namespace std;
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+
+const G4int NEVENTS = 50000;
+
+TSHMSPrimaryGeneratorAction::TSHMSPrimaryGeneratorAction(TSHMSDetectorConstruction* myDC)
+:myDetector(myDC)
+{
+  analysisManager = TSHMSAnalysisManager::getInstance();
+
+  G4int n_particle = 1;
+  particleGun = new G4ParticleGun(n_particle);
+
+// default particle
+
+  G4ParticleTable* particleTable = G4ParticleTable::GetParticleTable();
+  //G4ParticleDefinition* particle = particleTable->FindParticle("pi-");
+  //G4ParticleDefinition* particle = particleTable->FindParticle("kaon-");
+  // We want to ensure that we can detect pions but not kaon so the particle name will be 
+  // fetched from the analyisisManager to be implemented in future
+  G4ParticleDefinition* particle = particleTable->FindParticle(analysisManager->Particle);
+
+  particleGun->SetParticleDefinition(particle);
+  particleGun->SetParticleMomentumDirection(G4ThreeVector(0.,0.,1.));
+  particleGun->SetParticleEnergy(0.0*GeV);
+
+  TSHMSPrimaryGeneratorAction::TSHMSReadTransportMatrix();
+  G4cout << "Constructor of TSHMSPrimaryGeneratorAction called" << G4endl;
+
+  pHsyfp    = new G4double[NEVENTS];
+  pHsxfp    = new G4double[NEVENTS];
+  pHsypfp   = new G4double[NEVENTS];
+  pHsxpfp   = new G4double[NEVENTS];
+  pHsyCerp  = new G4double[NEVENTS];
+  pHsxCerp  = new G4double[NEVENTS];
+  pHsdelta  = new G4double[NEVENTS];
+
+  TSHMSPrimaryGeneratorAction::ReadGeneratedEvents(NEVENTS); // read generated events
+  UseGenerated = true;
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+
+TSHMSPrimaryGeneratorAction::~TSHMSPrimaryGeneratorAction()
+{
+  delete particleGun;
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+
+void TSHMSPrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
+{ 
+  static int nev = 0;
+
+  static G4ParticleTable* particleTable = G4ParticleTable::GetParticleTable();
+  //static G4ParticleDefinition* particle = particleTable->FindParticle("pi-");
+  static G4ParticleDefinition* particle = particleTable->FindParticle(analysisManager->Particle);
+  static G4double M = particle->GetPDGMass();
+
+  G4double Pmom;
+  G4double posX , posY , posZ , nPx , nPy , nPz;
+
+  G4cout.setf ( ios::showpoint | ios::fixed );
+
+  if( !UseGenerated ) {
+    analysisManager->EventNumber = nev + 1;  // Record the event number
+    G4cout << " Event number = " << nev + 1 << G4endl;
+    TSHMSTransportToCerenkov( posX , posY , posZ , nPx , nPy , nPz , Pmom );
+    G4double Energy = sqrt( Pmom * Pmom + M * M );
+
+    particleGun->SetParticleDefinition(particle);
+    particleGun->SetParticleEnergy( Energy );
+
+    particleGun->SetParticleMomentumDirection( G4ThreeVector( nPx, nPy , nPz ) );
+    particleGun->SetParticlePosition(G4ThreeVector(  posX , posY , posZ));
+
+    particleGun->GeneratePrimaryVertex(anEvent);
+  }  else {
+    analysisManager->EventNumber = nev+1; // Record the event number
+    G4cout << " Event number = " << nev + 1 << G4endl;
+
+    particleGun->SetParticleDefinition(particle);
+
+    static G4double Po = analysisManager->GetSHMSP0() *GeV;    
+
+    Pmom = Po * ( 1.0 + pHsdelta[nev]/100.0 );
+
+    G4double Energy = sqrt( Pmom * Pmom + M * M );
+    particleGun->SetParticleEnergy( Energy );
+
+    posX = pHsxCerp[nev] *cm;
+    posY = pHsyCerp[nev] *cm;
+    posZ = analysisManager->GettTankFrontZ() *cm;
+
+    particleGun->SetParticlePosition(G4ThreeVector(  posX , posY , posZ));
+
+        G4cout << " Pos x,y,z (mm) = " << posX << "  " << posY << "  " << posZ << G4endl;
+    
+        G4cout << " Po = "   << setw(10) << setprecision(3) << scientific << Po 
+          	   << " DP = "   << setw(10) << setprecision(3) << scientific << pHsdelta[nev]/100.0
+    	   << " Pmom = " << setw(10) << setprecision(3) << scientific << Pmom 
+    	   << " E = "    << setw(10) << setprecision(3) << scientific << Energy 
+    	   << G4endl;
+
+    nPx = pHsxpfp[nev];
+    nPy = pHsypfp[nev];
+    nPz = sqrt( 1.0 - nPx * nPx - nPy * nPy );
+    
+    //     G4cout << " nPx = " << setw(12) << nPx 
+    // 	   << " nPy = " << setw(12) << nPy
+    // 	   << " nPz = " << setw(12) << nPz 
+    // 	   << G4endl;
+    
+    particleGun->SetParticleMomentumDirection( G4ThreeVector( nPx, nPy , nPz ) );
+
+    particleGun->GeneratePrimaryVertex(anEvent);
+
+	// I changed this line because by exiting instead of returning the last event will fail and you will only have 4999 events
+	// of the 5000 inteneded.
+    if( nev == NEVENTS -1 ) { G4cout << "There are no more generated events, the limit reached at " << NEVENTS << G4endl; return; }
+  }
+  nev++;
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+
+void TSHMSPrimaryGeneratorAction::TSHMSReadTransportMatrix()
+{
+  G4cout <<" Reading transport matrix " << G4endl;
+
+  ifstream fin( "shms.dat" , ios::in );
+  if( !fin.is_open() ) {
+    G4cerr << "Can't open file shms.dat" << G4endl; 
+    exit( EXIT_FAILURE);
+  }
+  
+  G4double dummy;
+  fin >> dummy;
+
+  for( int ii = 0 ; ii < 6 ; ii++ ) {    
+    fin >> R[ii][0] >> R[ii][1] >> R[ii][2] >> R[ii][3] >> R[ii][4] >> R[ii][5] ;
+  }
+  G4cout.setf ( ios::showpoint | ios::fixed ); 
+  G4cout << G4endl;
+  G4cout << " -------- First order transport matrix ------- " << G4endl << G4endl;
+
+  for( int ii = 0 ; ii < 6 ; ii++ ) {
+    G4cout << setprecision(5) << setw(15) << R[ii][0]
+	   << setprecision(5) << setw(15) << R[ii][1]
+	   << setprecision(5) << setw(15) << R[ii][2]
+	   << setprecision(5) << setw(15) << R[ii][3]
+	   << setprecision(5) << setw(15) << R[ii][4]
+	   << setprecision(5) << setw(15) << R[ii][5]
+	   << G4endl;    
+  }
+  G4cout << " --------------------------------------------- " << G4endl;
+
+  for( int ii = 0 ; ii < 6 ; ii++ ) {
+    for( int jj = 0 ; jj < 6 ; jj++ ) {    
+      for( int kk = 0 ; kk < 6 ; kk++ ) {
+	T[ii][jj][kk] = 0.0;
+      }
+    }
+  }
+  std::string line;
+  //  getline( fin , line );
+  //  G4cout << line << G4endl;
+  G4cout.setf ( ios::showpoint | ios::fixed );
+  for( int ii = 0 ; ii < 5 ; ii++ ) {
+    for( int jj = 0 ; jj < 6 ; jj++ ) {    
+      for( int kk = 0 ; kk <=jj ; kk++ ) {
+
+	G4int idumm;
+
+	fin >> idumm >> idumm >> T[ii][jj][kk];
+	G4cout << ii << " " << jj << " " << kk << "  " << setw(20) << setprecision(3) << scientific << right << T[ii][jj][kk] << G4endl; 
+
+      }
+    }
+    getline( fin , line );
+  }
+
+  fin.close();
+}
+void TSHMSPrimaryGeneratorAction::TSHMSTransportToCerenkov( G4double &x , G4double &y , G4double &z , 
+							   G4double &px , G4double &py , G4double &pz , G4double &Pmom )
+{
+  static const G4double P_CENTRAL = analysisManager->GetSHMSP0() *GeV;
+
+  static const G4double DP_MAX    =   22.0;
+  static const G4double DP_MIN    =  -10.0;
+  static const G4double YTARG_MAX =   20.0;
+  static const G4double YTARG_MIN =  -20.0;
+  static const G4double TH_MAX    =   24.0;
+  static const G4double TH_MIN    =  -24.0;
+  static const G4double PH_MAX    =   55.0;
+  static const G4double PH_MIN    =  -55.0;
+
+  G4double dptgt = DP_MIN + ( DP_MAX - DP_MIN ) * CLHEP::RandFlat::shoot( 0.0 , 1.0 );
+  
+  G4double ytgt  = YTARG_MIN + ( YTARG_MAX - YTARG_MIN ) * CLHEP::RandFlat::shoot( 0.0 , 1.0 );
+
+  G4double thtgt = TH_MIN + ( TH_MAX - TH_MIN ) * CLHEP::RandFlat::shoot( 0.0 , 1.0 );
+
+  G4double phtgt = PH_MIN + ( PH_MAX - PH_MIN ) * CLHEP::RandFlat::shoot( 0.0 , 1.0 );
+
+  G4double xtgt  = 0.0;
+
+  Pmom = P_CENTRAL * ( 1.0 + dptgt / 100.0 );
+
+  G4double MatrixIn[6];
+
+  MatrixIn[0] = xtgt;   // cm
+  MatrixIn[1] = thtgt;  // miliradian
+  MatrixIn[2] = ytgt;   // cm 
+  MatrixIn[3] = phtgt;  // miliradian
+  MatrixIn[4] = 0.0;
+  MatrixIn[5] = dptgt;  // percent
+
+  //  G4cout << "Initial coordinates" << G4endl;
+
+  //  G4cout << " x  theta  y  phi  L  dp" << G4endl;
+
+//   G4cout << setprecision(5) << setw(15) <<  MatrixIn[0]
+// 	 << setprecision(5) << setw(15) <<  MatrixIn[1]
+// 	 << setprecision(5) << setw(15) <<  MatrixIn[2] 
+// 	 << setprecision(5) << setw(15) <<  MatrixIn[3] 
+// 	 << setprecision(5) << setw(15) <<  MatrixIn[4] 
+// 	 << setprecision(5) << setw(15) <<  MatrixIn[5] 
+// 	 << G4endl;
+
+  G4double MatrixOut[] = { 0.0 , 0.0 , 0.0 , 0.0 , 0.0 , 0.0 };
+
+
+  for( int ii = 0 ; ii < 6 ; ii++ ) {
+    for(  int jj = 0 ; jj < 6 ; jj++ ) {
+
+      MatrixOut[ii] += R[ii][jj] * MatrixIn[jj];
+
+      for( int kk = 0 ; kk < 6 ; kk++ ) {
+	MatrixOut[ii] += T[ii][jj][kk] * MatrixIn[jj] * MatrixIn[kk];
+      }
+    }
+  }
+
+  //  G4cout << "Transported coordinates" << G4endl;
+
+  //   G4cout << setprecision(5) << setw(15) <<  MatrixOut[0]
+  // 	 << setprecision(5) << setw(15) <<  MatrixOut[1]
+  // 	 << setprecision(5) << setw(15) <<  MatrixOut[2] 
+  // 	 << setprecision(5) << setw(15) <<  MatrixOut[3] 
+  // 	 << setprecision(5) << setw(15) <<  MatrixOut[4] 
+  // 	 << setprecision(5) << setw(15) <<  MatrixOut[5] 
+  // 	 << G4endl;
+
+  px = cos( MatrixOut[3] / 1000.0 ) * sin( MatrixOut[1] / 1000.0 ); // divide to 1000 to convert mradian -> radian
+  py = sin( MatrixOut[3] / 1000.0 );
+  pz = cos( MatrixOut[3] / 1000.0 ) * cos( MatrixOut[1] / 1000.0 );
+
+  //  G4double norm = sqrt( px * px + py * py + pz * pz );
+  //  G4cout << "Direction vectors " << px << "  " << py << "  " << pz << " norm = " << norm << G4endl; 
+
+  x = MatrixOut[0] * cm;
+  y = MatrixOut[2] * cm;
+  z = analysisManager->GettTankFrontZ() *cm;
+}
+void TSHMSPrimaryGeneratorAction::ReadGeneratedEvents(G4int NEVENTS)
+{
+  string fname,line;
+  ifstream ff( "genkinfile.txt" , ios::in );
+  if( !ff.is_open() ) { G4cerr << "Can't open file genkinfile.txt" << G4endl; exit(1);}
+
+  while(!ff.eof()) {
+    getline( ff , line );
+    if( line[0]=='#' )   continue;
+    if( line.size()==0 ) break;
+    fname = line;
+  }
+  ff.close();
+  G4cout << "Generated file name = " << fname << endl;
+
+  G4int ii = 0;
+  ifstream fin( fname.c_str() , ios::in );
+  
+  getline( fin , line );
+  G4cout << line << G4endl;
+  getline( fin , line );
+  G4cout << line << G4endl;
+  getline( fin , line );
+  G4cout << line << G4endl;
+  //  getline( fin , line );
+  //  G4cout << line << G4endl;
+
+  // ---
+  
+  for(int nev = 0 ; nev < NEVENTS; nev++ ) {
+    
+    getline( fin , line );    
+    for(unsigned int jj = 0 ; jj < line.size(); jj++ ) {
+      if(line[jj] == '|') line[jj] = ' ';
+    } // Get read of simbol '|'
+
+	// This did not work with our geomery so I interchanged the x and the y values to make it clearer
+    //    sscanf( line.c_str() , " %d %lf %lf %lf %lf %lf %lf" , 
+    //	    &ii , &pHsyfp[nev], &pHsxfp[nev], &pHsypfp[nev], &pHsxpfp[nev], &pHsyCerp[nev], &pHsxCerp[nev] );
+    //    G4cout << line << endl;
+    sscanf( line.c_str() , " %d %lf %lf %lf %lf %lf" , 
+	    &ii , &pHsxfp[nev], &pHsyfp[nev], &pHsxpfp[nev], &pHsypfp[nev], &pHsdelta[nev] );
+     
+    pHsyCerp[nev] = pHsyfp[nev] + analysisManager->GettTankFrontZ() * pHsypfp[nev];
+    pHsxCerp[nev] = pHsxfp[nev] + analysisManager->GettTankFrontZ() * pHsxpfp[nev];
+    
+    //        G4cout << setw(6)  << nev            << "   "
+    //    	   << setw(12) << pHsyfp[nev]   << "   "
+    //    	   << setw(12) << pHsxfp[nev]   << "   "
+    //    	   << setw(12) << pHsypfp[nev]  << "   "
+    //    	   << setw(12) << pHsxpfp[nev]  << "   "
+    //    	   << setw(12) << pHsyCerp[nev] << "   "
+    //    	   << setw(12) << pHsxCerp[nev] << "   "
+    //    	   << setw(12) << pHsdelta[nev] << "   "
+    //    	   << G4endl;
+  }
+  fin.close();
+}
