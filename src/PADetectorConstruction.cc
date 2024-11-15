@@ -1,4 +1,5 @@
 #include "PADetectorConstruction.hh"
+
 #include "PAHodoscopeSD.hh"
 
 #include "G4Material.hh"
@@ -17,6 +18,7 @@
 #include "G4UserLimits.hh"
 
 #include "G4SDManager.hh"
+//#include "G4UImanager.hh"
 #include "G4VSensitiveDetector.hh"
 #include "G4RunManager.hh"
 #include "G4GenericMessenger.hh"
@@ -40,7 +42,8 @@ PADetectorConstruction::PADetectorConstruction()
   fSHMSPhys(nullptr)
 
 {
-	//so far empty
+	fUseNGC=0;
+	ReadParameters("detectors.dat");
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -49,22 +52,24 @@ PADetectorConstruction::~PADetectorConstruction(){
   for (auto visAttributes: fVisAttributes) {
     delete visAttributes;
   }  
+  //delete fDetMessenger;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 G4VPhysicalVolume* PADetectorConstruction::Construct(){
   
-  // Construct materials
-  ConstructMaterials();
+  // Option to switch on/off checking of volumes overlaps
+  G4bool checkOverlaps = true;
+
+
+  //material shortcut codes
   auto air = G4Material::GetMaterial("G4_AIR");
   auto argonGas = G4Material::GetMaterial("G4_Ar");
   auto scintillator = G4Material::GetMaterial("G4_PLASTIC_SC_VINYLTOLUENE");
   auto csI = G4Material::GetMaterial("G4_CESIUM_IODIDE");
   auto lead = G4Material::GetMaterial("G4_Pb");
-  
-  // Option to switch on/off checking of volumes overlaps
-  G4bool checkOverlaps = true;
+
 
   // geometries --------------------------------------------------------------
   // experimental hall (world volume)
@@ -88,15 +93,21 @@ G4VPhysicalVolume* PADetectorConstruction::Construct(){
                         false,0,checkOverlaps); 
   			//place so that front face is on (0,0,0)
   
-  // Noble Gas Cerenkov: 0<z<1 m
-  auto NGCSolid
-    = new G4Box("NGCBox",1.0*m,30.*cm,50.*cm);
-  auto fNGCLogical
-    = new G4LogicalVolume(NGCSolid,argonGas,"NGCLogical");
-  new G4PVPlacement(0,G4ThreeVector(0.,0.,0.5*m),fNGCLogical,
-                    "NGCPhysical",SHMSLogical,
-                    false,0,checkOverlaps);
-  
+  //NGC: optional, some modifications if turned off
+  if (fUseNGC ==1){
+        auto NGCSolid
+          = new G4Box("NGCBox",1.0*m,30.*cm,50.*cm);
+        auto fNGCLogical
+          = new G4LogicalVolume(NGCSolid,argonGas,"NGCLogical");
+        new G4PVPlacement(0,G4ThreeVector(0.,0.,0.5*m),fNGCLogical,
+                          "NGCPhysical",SHMSLogical,
+                          false,0,checkOverlaps);
+  	fNGCLogical->SetVisAttributes(G4Colour(0.4,0.6,0.7));
+  } else {
+          //do nothing
+  }
+
+
   // drift chambers: 1<z<2 m
   auto DCSolid 
     = new G4Box("DCBox",1.0*m,30.*cm,1.*cm);
@@ -183,7 +194,6 @@ G4VPhysicalVolume* PADetectorConstruction::Construct(){
   //all Cerenkovs in Light Gray 
   visAttributes = new G4VisAttributes(G4Colour(0.9,0.9,0.9));   // LightGray 
   fHGCLogical->SetVisAttributes(visAttributes);
-  fNGCLogical->SetVisAttributes(visAttributes);
   fAGCLogical->SetVisAttributes(visAttributes);
   fVisAttributes.push_back(visAttributes);
   
@@ -217,6 +227,7 @@ G4VPhysicalVolume* PADetectorConstruction::Construct(){
 
 void PADetectorConstruction::ConstructSD()
 {
+  G4cout<<"ConstructSD()"<<G4endl;
   // sensitive detectors -----------------------------------------------------
   auto sdManager = G4SDManager::GetSDMpointer();
   G4String SDname;
@@ -239,12 +250,56 @@ void PADetectorConstruction::ConstructSD()
   fS2YLogical->SetSensitiveDetector(hodoscope2y);
   
 
-}    
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+//read the NGC option
+void PADetectorConstruction::ReadParameters(const char* file){
+        //define file contents
+        char* keylist[] = { (char*) "Use-NGC:", NULL}; //only NGC option
+        enum {ENGC, ENULL};
+        G4int ikey, iread;
+        G4int ierr = 0;
+        char line[256];
+        char delim[64];
+        //open the file
+        FILE* pdata;
+        if( (pdata = fopen(file,"r")) == NULL ){
+                printf("Error opening detector parameter file: %s\n",file);
+                return;
+        }
+        //start reading the file
+        while( fgets(line,256,pdata) ){
+        if( line[0] == '#' ) continue; //skip commented lines
+        printf("%s\n",line);
+        sscanf(line,"%s",delim);
+        for(ikey=0; ikey<ENULL; ikey++) //look for the defined keys
+            if(!strcmp(keylist[ikey],delim)) break;
+        switch( ikey ){
+        default:
+            //stop running if the file contains something strange
+            printf("Unrecognised delimiter: %s\n",delim);
+            ierr++;
+            break;
+        case ENGC: //dimensions of main target vessel
+            iread = sscanf(line,"%*s%d", //line contains text, one integer
+                           &fUseNGC); //assign to this variable
+            if( iread != 1) ierr++;
+            break;
+            }
+        if( ierr ){ //if something strange is in the file, error and exit
+                printf("Fatal Error: invalid read of parameter line %s\n %s\n",
+                   keylist[ikey],line);
+            exit(-1);
+                }
+        }
+}
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 void PADetectorConstruction::ConstructMaterials()
 {
+	G4cout<<"ConstructMaterials()"<<G4endl;
   auto nistManager = G4NistManager::Instance();
 
   // Air 
