@@ -116,10 +116,10 @@ std::vector<G4AttValue>* PAHodoscopeHit::CreateAttValues() const
     ->push_back(G4AttValue("HitType","HodoscopeHit",""));
   values
     ->push_back(G4AttValue("ID",G4UIcommand::ConvertToString(fId),""));
-  values
-    ->push_back(G4AttValue("Time",G4BestUnit(fTime,"Time"),""));
-  values
-    ->push_back(G4AttValue("Edep",G4BestUnit(fEdep,"Edep"),""));
+  //values->push_back(G4AttValue("Time",G4BestUnit(fTime,"Time"),""));
+  //values->push_back(G4AttValue("Edep",G4BestUnit(fEdep,"Edep"),""));
+  values->push_back(G4AttValue("Time",fTime/ns,""));
+  values->push_back(G4AttValue("Edep",fEdep/MeV,""));
   values
     ->push_back(G4AttValue("Pos",G4BestUnit(fPos,"Length"),""));
   
@@ -135,7 +135,7 @@ std::vector<G4AttValue>* PAHodoscopeHit::CreateAttValues() const
 
 void PAHodoscopeHit::Print()
 {
-  G4cout << "  Hodoscope[" << fId << "] " << fEdep/MeV << " (MeV)" << fTime/ns << " (nsec)" << G4endl;
+  G4cout << fEdep/MeV << " (MeV) " << fTime/ns << " (nsec)" << G4endl;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

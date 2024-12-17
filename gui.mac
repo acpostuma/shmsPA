@@ -27,16 +27,9 @@
 /gui/addButton gun "pi+"     "/gun/particle pi+"
 /gui/addButton gun "neutron" "/gun/particle neutron"
 /gui/addButton gun "proton"  "/gun/particle proton"
-# Also, we need to switch off primary randomization for the /gun/ commands to
-# work
-/B5/generator/randomizePrimary false
 #
-# Field menu :
-/gui/addMenu field Field
-/gui/addButton field "off"       "/B5/field/value 0   tesla"
-/gui/addButton field "0.2 tesla" "/B5/field/value 0.2 tesla"
-/gui/addButton field "2.0 tesla" "/B5/field/value 2.0 tesla"
-#
+## By default, do not use generated events in GUI
+/PA/generator/useGenerated false
 # Viewer menu :
 /gui/addMenu viewer Viewer
 /gui/addButton viewer "Set style surface" "/vis/viewer/set/style surface"

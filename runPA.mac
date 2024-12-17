@@ -1,0 +1,5 @@
+##macro file for calculation of proton abs
+/run/initialize
+/PA/generator/momentum 5 GeV
+/PA/generator/useGenerated true
+/run/beamOn 200
