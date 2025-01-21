@@ -2,6 +2,7 @@
 #include "PAPrimaryGeneratorAction.hh"
 #include "PARunAction.hh"
 #include "PAEventAction.hh"
+#include "PASteppingAction.hh"
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
@@ -30,6 +31,9 @@ void PAActionInitialization::Build() const
 
   auto eventAction = new PAEventAction;
   SetUserAction(eventAction);
+  
+  auto steppingAction = new PASteppingAction;
+  SetUserAction(steppingAction);
 
   SetUserAction(new PARunAction(eventAction));
 }  

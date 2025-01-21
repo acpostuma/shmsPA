@@ -35,6 +35,7 @@ PARunAction::PARunAction(PAEventAction* eventAction)
     analysisManager->CreateNtupleDColumn("S1YEnergy");    // column Id = 5
     analysisManager->CreateNtupleDColumn("S2XEnergy");    // column Id = 6
     analysisManager->CreateNtupleDColumn("S2YEnergy");    // column Id = 7
+    analysisManager->CreateNtupleIColumn("S2YNPE");    // column Id = 8
     analysisManager->FinishNtuple();
   }
 }

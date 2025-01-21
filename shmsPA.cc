@@ -15,10 +15,18 @@
 
 #include "G4UImanager.hh"
 #include "FTFP_BERT.hh"
+#include "QGSP_BERT.hh"
+#include "G4PhysListFactory.hh"
 #include "G4StepLimiterPhysics.hh"
 
 #include "G4VisExecutive.hh"
 #include "G4UIExecutive.hh"
+
+//copy some physics lists from A2Geant4
+#include "G4OpticalPhysics.hh"
+#include "G4EmLivermorePhysics.hh"
+#include "G4FastSimulationPhysics.hh" //low E electron physics
+
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
@@ -42,8 +50,12 @@ int main(int argc,char** argv)
   // Mandatory user initialization classes
   runManager->SetUserInitialization(new PADetectorConstruction);
 
-  auto physicsList = new FTFP_BERT;
+  auto physicsList = new FTFP_BERT; //currrent default
   physicsList->RegisterPhysics(new G4StepLimiterPhysics());
+  //add optical and low energy electromagnetic models
+  physicsList->RegisterPhysics(new G4OpticalPhysics()); //optical photons: want Cherenkov
+  physicsList->ReplacePhysics(new G4EmLivermorePhysics()); //replace standard EM
+
   runManager->SetUserInitialization(physicsList);
 
   // User action initialization
