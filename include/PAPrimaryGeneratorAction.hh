@@ -44,7 +44,8 @@ class PAPrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
     G4int NEVENTS;
     G4int nev;
     G4bool fUseGenerated;
-    G4double ztar = -3.5;
+    G4String fInputFileName = "run5055kine.txt";
+    G4double ztar = -3.13;
 };
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

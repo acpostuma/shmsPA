@@ -55,13 +55,14 @@ void PASteppingAction::UserSteppingAction(const G4Step* step)
   auto logV = startPoint->GetTouchable()->GetVolume()->GetLogicalVolume();
   auto ekin = track->GetKineticEnergy();
 
-  //if (fVerbose >=1){
-  //	if (track->GetParentID()==0 && step->IsLastStepInVolume()){  
-//		G4cout<<logV->GetName()<<" "<<ekin<<G4endl;
-//	  }
-  //}
-  
-	  //ONLY if in the particle is in S2Y
+  //find where primary track ends, if it is stopped before the calorimeter
+  if (track->GetTrackStatus()==fStopAndKill && track->GetParentID()==0){
+	  if (logV->GetName()!="CalLogical"){
+		G4cout<<"Track stopped in "<<logV->GetName()<<G4endl;
+	  }
+  }
+
+  //ONLY if in the particle is in S2Y
   //count one level of secondaries, not arbitrary amounts
   if (logV->GetName()=="S2YLogical" && track->GetParentID()==0){
 

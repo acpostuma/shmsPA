@@ -16,7 +16,7 @@
 PAPrimaryGeneratorAction::PAPrimaryGeneratorAction()
 : G4VUserPrimaryGeneratorAction(),     
   fParticleGun(nullptr), fMessenger(nullptr), 
-  fMomentum(3.*GeV)
+  fMomentum(5.*GeV)
 {
 
 
@@ -27,7 +27,7 @@ PAPrimaryGeneratorAction::PAPrimaryGeneratorAction()
   fProton = particleTable->FindParticle("proton");
   
   //gun particle and position: does not need to change
-  fParticleGun->SetParticlePosition(G4ThreeVector(0.,0.,-1.*m));
+  fParticleGun->SetParticlePosition(G4ThreeVector(0.,0.,-3.*m));
   fParticleGun->SetParticleDefinition(fProton);
   
   // define commands for this class
@@ -120,9 +120,14 @@ void PAPrimaryGeneratorAction::DefineCommands()
 
   //choose to use generated events or not
   auto& genCmd = fMessenger->DeclareProperty("useGenerated",fUseGenerated);
-  genCmd.SetGuidance("Use generated events from file genkinfile.txt");
+  genCmd.SetGuidance("Use generated events from file");
   genCmd.SetParameterName("bool", true);
   genCmd.SetDefaultValue("false");
+
+  auto& fileCmd = fMessenger->DeclareProperty("setInFile",fInputFileName);
+  fileCmd.SetGuidance("Set file name for input kinematics");
+  fileCmd.SetParameterName("string",true);
+  fileCmd.SetDefaultValue("run5055kine.txt");
   
 }
 
@@ -134,7 +139,7 @@ void PAPrimaryGeneratorAction::ReadGeneratedEvents(){
   //loosely based off Bill's code
   //read genkinfile.txt, which has structure delta, xfp, yfp, xpfp, ypfp
   std::string line;
-  std::ifstream fin( "run5055kine.txt" , std::ios::in );
+  std::ifstream fin( fInputFileName , std::ios::in );
   if( !fin.is_open() ) { G4cerr << "Can't open file genkinfile.txt" << G4endl; exit(1);}
 
 
