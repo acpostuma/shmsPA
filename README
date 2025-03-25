@@ -1,9 +1,46 @@
-A.C. Postuma 2024
+/*********************************
+A.C. Postuma 2025
 SHMS materials simulation for determination of proton absorption correction.
-Modified from geant4 example basic/B5
-Original README of basic/B5 follows.
+Modified from geant4 example basic/B5. Original README of basic/B5 at end of file.
+*********************************/
+
+Building instructions: standard CMake install
+mkdir build && cd build && cmake .. && make && cd ..
+
+Running instructions:
+To run interactive GUI: ./build/shmsPA
+To run in batch mode: ./build/shmsPA runPA.mac
+
+Detector construction has two options, contained in detectors.dat.
+"Use-NGC:" boolean for inclusion of NGC.
+"Aero-Tray:" specify index of refraction for AGC. The supported options are:
+10 (n=1.010), 15 (n=1.015), 20 (n=1.020), and 30 (n=1.030).
+If an unexpected value is given, n=1.030 will be used.
+
+The output is a root tree. The default file name is "PAOutData.root".
+Output file name can be specified in the macro file (runPA.mac). The tree contains:
+S1XEnergy (MeV)
+S1XTime (ns)
+S1YEnergy (MeV)
+S1YTime (ns)
+S2XEnergy (MeV)
+S2XTime (ns)
+S2YEnergy (MeV): not really used, as S2Y is a Cherenkov
+S2YTime (ns)
+NPE (in S2Y)
+CopyNo: unique copy number of volume in which particle track stops.
+"0" indicates the particle successfully reaches the calorimeter.
+This is only really intended for Alicia's debugging, hence the copy number
+mapping is not explained here.
 
 This document will be updated as the simulation progresses.
+
+Main sources:
+- spreadsheet, found in this folder
+- schematics https://hallcweb.jlab.org/DocDB/0006/000680/001/67165-00001_sht1.pdf
+- G4 Nist Documentation https://www.fe.infn.it/u/paterno/Geant4_tutorial/slides_further/Geometry/G4_Nist_Materials.pdf
+- Tanja's AGC paper https://arxiv.org/pdf/1607.05264
+- Wiki links https://hallcweb.jlab.org/wiki/index.php/Main_Page#SHMS_Detectors
 
 
     =========================================================

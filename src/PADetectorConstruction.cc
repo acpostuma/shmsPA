@@ -44,6 +44,7 @@ PADetectorConstruction::PADetectorConstruction()
 
 {
 	fUseNGC=0;
+	fAeroTray=1;
 	ReadParameters("detectors.dat");
 	ConstructMaterials();
 }
@@ -63,6 +64,9 @@ G4VPhysicalVolume* PADetectorConstruction::Construct(){
   
   // Option to switch on/off checking of volumes overlaps
   G4bool checkOverlaps = false;
+  // Max step size for the hodoscopes
+  G4double maxStep = 1.0*mm;
+  auto hodoStepLimit = new G4UserLimits(maxStep);
 
 
   //material shortcut codes
@@ -83,6 +87,7 @@ G4VPhysicalVolume* PADetectorConstruction::Construct(){
   auto kapton = G4Material::GetMaterial("G4_KAPTON");
   auto rohacell = G4Material::GetMaterial("RohaCell");
   auto sio2 = G4Material::GetMaterial("SiO2");
+  auto LH2 = G4Material::GetMaterial("LH2");
 
   //define colours
   auto greyblue = new G4VisAttributes(G4Colour(0.4,0.6,0.7));
@@ -91,9 +96,14 @@ G4VPhysicalVolume* PADetectorConstruction::Construct(){
   auto green = new G4VisAttributes(G4Colour(0.0,1.0,0.0));
   auto yellow = new G4VisAttributes(G4Colour(1.0,1.0,0.0));
   auto purple = new G4VisAttributes(G4Colour(1.0,0.0,1.0));
+  auto orange = new G4VisAttributes(G4Colour(1.0,0.5,0.0));
 
   //distances from focal plane to center of detector
   //estinated: some conflicting information
+  G4double fTGT_cm = -313;
+  G4double fHB_cm = -290;
+  G4double fDip_noNGC_cm = -50;
+  G4double fDip_NGC_cm = -280;
   G4double fNGC_cm = -177;
   G4double fDC1_cm = -40;
   G4double fDC2_cm = 40;
@@ -130,6 +140,44 @@ G4VPhysicalVolume* PADetectorConstruction::Construct(){
                         "fSHMSPhys",worldLogical,
                         false,0,checkOverlaps); 
   
+  //Target and entrance window -------------------------------------------
+  //LH2 in loop
+  //size is 4cm diameter, inner diameter measured on DocDB
+  //make larger in order to work with the simulated xtar, ytar
+  auto targetSolid
+	  = new G4Tubs("targetCyl",0.*cm, 20.*cm, 5.*cm, 0.*deg, 360.*deg);
+  auto targetLogical 
+	  = new G4LogicalVolume(targetSolid,LH2,"targetLogical");
+  new G4PVPlacement(0, G4ThreeVector(0,0,fTGT_cm*cm),targetLogical,
+		  "fTargetPhys",SHMSLogical,
+		  false,10,checkOverlaps);
+  targetLogical->SetVisAttributes(blue);
+  //target exit window
+  auto targetExitSolid 
+	  = new G4Tubs("targetExitCyl",0.*cm,2.*cm,0.005*cm,0.*deg,360.*deg);
+  auto targetExitLogical
+	  = new G4LogicalVolume(targetExitSolid,aluminum,"targetExitLogical");
+  new G4PVPlacement(0,G4ThreeVector(0,0,4.995*cm),targetExitLogical,
+		  "fTargetExitPhys",targetLogical,
+		  false,10,checkOverlaps);
+  //HB entrance
+  //Make smaller so it's clear what this is 
+  auto HBExitSolid
+	  = new G4Box("HBExitBox",0.5*m,0.5*m,0.015*cm);
+  auto HBExitLogical
+	  = new G4LogicalVolume(HBExitSolid,aluminum,"HBExitLogical");
+  new G4PVPlacement(0,G4ThreeVector(0,0,fHB_cm*cm),HBExitLogical,
+		  "fHBExitPhys",SHMSLogical,
+		  false,11,checkOverlaps);
+  HBExitLogical->SetVisAttributes(orange);
+  //Dipole exit
+  auto DipExitSolid
+	  = new G4Box("DipExitBox",0.5*m,0.5*m,0.025*cm);
+  auto DipExitLogical
+	  = new G4LogicalVolume(DipExitSolid,aluminum,"DipExitLogical");
+  DipExitLogical->SetVisAttributes(orange);
+  //placement depends on Noble Gas enabled or not
+
   //Noble Gas Cherenkov -----------------------------------------------
   if (fUseNGC ==1){ //if NGC included in experimental configuration
 	//main Cherenkov volume
@@ -139,7 +187,7 @@ G4VPhysicalVolume* PADetectorConstruction::Construct(){
           = new G4LogicalVolume(NGCSolid,nobleGas,"NGCLogical");
         new G4PVPlacement(0,G4ThreeVector(0.,0.,fNGC_cm*cm),fNGCLogical,
                           "NGCPhysical",SHMSLogical,
-                          false,0,checkOverlaps);
+                          false,20,checkOverlaps);
   	fNGCLogical->SetVisAttributes(greyblue);
 	
 	//entrance and exit windows
@@ -148,10 +196,10 @@ G4VPhysicalVolume* PADetectorConstruction::Construct(){
 			"NGCWindowLogical");
 	//entrance
 	new G4PVPlacement(0,G4ThreeVector(0,0,-0.995*m),fNGCWindowLogical,
-			"fNGCEntrancePhys",fNGCLogical,false,0,checkOverlaps);
+			"fNGCEntrancePhys",fNGCLogical,false,21,checkOverlaps);
 	//exit
 	new G4PVPlacement(0,G4ThreeVector(0,0,0.995*m),fNGCWindowLogical,
-			"fNGCExitPhys",fNGCLogical,false,0,checkOverlaps);
+			"fNGCExitPhys",fNGCLogical,false,24,checkOverlaps);
 	
 	//mirror
 	auto NGCMirrorSolid = new G4Box("NGCMirrorBox",1.0*m,1.0*m,0.15*cm); 
@@ -159,23 +207,31 @@ G4VPhysicalVolume* PADetectorConstruction::Construct(){
 					"NGCMirrorLogical");
 	//guessing at positioning
 	new G4PVPlacement(0,G4ThreeVector(0,0,0.8*m),fNGCMirrorLogical,
-		"fNGCMirrorPhys",fNGCLogical,false,0,checkOverlaps);
+		"fNGCMirrorPhys",fNGCLogical,false,22,checkOverlaps);
 	//mirror support
 	auto NGCSupportSolid = new G4Box("NGCSupportBox",1.0*m,1.0*m,0.9*cm); 
 	auto fNGCSupportLogical = new G4LogicalVolume(NGCSupportSolid,rohacell,
 					"NGCSupportLogical");
 	//guessing at positioning
 	new G4PVPlacement(0,G4ThreeVector(0,0,0.815*m),fNGCSupportLogical,
-		"fNGCSupportPhys",fNGCLogical,false,0,checkOverlaps);
+		"fNGCSupportPhys",fNGCLogical,false,23,checkOverlaps);
+  
+	//now place the dipole exit
+	new G4PVPlacement(0,G4ThreeVector(0,0,fDip_NGC_cm*cm),DipExitLogical,
+		  "fDipExitPhys",SHMSLogical,
+		  false,12,checkOverlaps);
   } else {
-          //do nothing
+          
+	new G4PVPlacement(0,G4ThreeVector(0,0,fDip_noNGC_cm*cm),DipExitLogical,
+		  "fDipExitPhys",SHMSLogical,
+		  false,12,checkOverlaps);
   }
 
 
   // Drift Chambers ----------------------------------------------------------
   //  1<z<2 m
   auto DCSolid 
-    = new G4Box("DCBox",1.0*m,1.0*m,1.905*cm);
+    = new G4Box("DCBox",1.0*m,1.0*m,1.905*cm); //unclear now large these acutally are
   auto fDCLogical
     = new G4LogicalVolume(DCSolid,driftGas,"DCLogical");
   fDCLogical->SetVisAttributes(green);
@@ -183,53 +239,55 @@ G4VPhysicalVolume* PADetectorConstruction::Construct(){
   auto DCWindowSolid = new G4Box("DCWindowBox",1.0*m,1.0*m,0.00125*cm);
   auto fDCWindowLogical = new G4LogicalVolume(DCWindowSolid,mylar,"DCWindowLogical");
   new G4PVPlacement(0,G4ThreeVector(0,0,-1.90625*cm),fDCWindowLogical,
-		  "DCEntrancePhys",fDCLogical,false,0,checkOverlaps);
+		  "DCEntrancePhys",fDCLogical,false,31,checkOverlaps);
   new G4PVPlacement(0,G4ThreeVector(0,0,1.90625*cm),fDCWindowLogical,
-		  "DCExitPhys",fDCLogical,false,0,checkOverlaps);
+		  "DCExitPhys",fDCLogical,false,35,checkOverlaps);
   
   //field wires: slab of equivalent width 
   auto DCWireSolid = new G4Box("DCWireBox",1.*m,1.*m,0.02415*mm);
   //wrong material for now
   auto fDCWireLogical = new G4LogicalVolume(DCWireSolid,tungsten,"DCWireLogical");
-  new G4PVPlacement(0,G4ThreeVector(0,0,0),fDCWireLogical,"DCWirePhys",fDCLogical,false,0,checkOverlaps);
+  new G4PVPlacement(0,G4ThreeVector(0,0,0),fDCWireLogical,"DCWirePhys",fDCLogical,false,32,checkOverlaps);
   //sensing wires
   auto DCSenseSolid = new G4Box("DCWireBox",1.*m,1.*m,0.0015*mm);
   //wrong material for now
   //copper-plated beryllium but density is higher than both??
   auto fDCSenseLogical = new G4LogicalVolume(DCSenseSolid,copper,"DCSenseLogical");
   new G4PVPlacement(0,G4ThreeVector(0,0,2*mm),
-		  fDCSenseLogical,"DCSensePhys",fDCLogical,false,0,
+		  fDCSenseLogical,"DCSensePhys",fDCLogical,false,33,
 		  checkOverlaps);
   //cathode 
-  auto DCCathodeSolid = new G4Box("DCCathodeBox",1.*m,1.*m,0.4*cm);
+  auto DCCathodeSolid = new G4Box("DCCathodeBox",1.*m,1.*m,0.045*cm);
   auto fDCCathodeLogical = new G4LogicalVolume(DCCathodeSolid,kapton,"DCCathodeLogical");
-  new G4PVPlacement(0,G4ThreeVector(0,0,0),fDCCathodeLogical,"DCCathodePhys",fDCLogical,false,0,checkOverlaps);
+  new G4PVPlacement(0,G4ThreeVector(0,0,0),fDCCathodeLogical,"DCCathodePhys",fDCLogical,false,34,checkOverlaps);
 
   //place the finished drift chambers: two with 1.1m separation 
    new G4PVPlacement(0,G4ThreeVector(0.,0.,fDC1_cm*cm),fDCLogical,
                       "DC1Physical",SHMSLogical,
-                      false,0,checkOverlaps);
+                      false,30,checkOverlaps);
    new G4PVPlacement(0,G4ThreeVector(0.,0.,fDC2_cm*cm),fDCLogical,
                       "DC2Physical",SHMSLogical,
-                      false,0,checkOverlaps);
+                      false,30,checkOverlaps);
 
   // S1 Hodoscopes --------------------------------------------------------
   auto S1Solid 
-    = new G4Box("S1Box",50.*cm,50.*cm,0.25*cm);
+    = new G4Box("S1Box",50.*cm,50.*cm,0.25*cm); //paddles are .5cm thick
   fS1XLogical
     = new G4LogicalVolume(S1Solid,scintillator,"S1XLogical");
   fS1YLogical
     = new G4LogicalVolume(S1Solid,scintillator,"S1YLogical");
   fS1XLogical->SetVisAttributes(red);
   fS1YLogical->SetVisAttributes(red);
+  fS1XLogical->SetUserLimits(hodoStepLimit);
+  fS1YLogical->SetUserLimits(hodoStepLimit);
 
   //place both S1X and S1Y
   new G4PVPlacement(0,G4ThreeVector(0.,0.,fS1X_cm*cm),fS1XLogical,
                      "S1Physical",SHMSLogical,
-                      false,0,checkOverlaps);
+                      false,1,checkOverlaps);
   new G4PVPlacement(0,G4ThreeVector(0.,0.,fS1Y_cm*cm),fS1YLogical,
                      "S1Physical",SHMSLogical,
-                      false,0,checkOverlaps);
+                      false,2,checkOverlaps);
   
   // Heavy Gas Cerenkov -------------------------------------------------
   auto HGCSolid
@@ -238,16 +296,16 @@ G4VPhysicalVolume* PADetectorConstruction::Construct(){
     = new G4LogicalVolume(HGCSolid,heavyGas,"HGCLogical");
   new G4PVPlacement(0,G4ThreeVector(0.,0.,fHGC_cm*cm),fHGCLogical,
                     "HGCPhysical",SHMSLogical,
-                    false,0,checkOverlaps);
+                    false,40,checkOverlaps);
   //entrance and exit windows
   auto HGCWindowSolid = new G4Box("HGCWindowBox",1.0*m,1.0*m,0.05*cm);
   auto fHGCWindowLogical = new G4LogicalVolume(HGCWindowSolid,aluminum,"HGCWindowLogical");
-  new G4PVPlacement(0,G4ThreeVector(0,0,-52.17*cm),fHGCWindowLogical,"HGCEntrancePhys",fHGCLogical,false,0,checkOverlaps);
-  new G4PVPlacement(0,G4ThreeVector(0,0,52.17*cm),fHGCWindowLogical,"HGCExitPhys",fHGCLogical,false,0,checkOverlaps);
+  new G4PVPlacement(0,G4ThreeVector(0,0,-52.17*cm),fHGCWindowLogical,"HGCEntrancePhys",fHGCLogical,false,41,checkOverlaps);
+  new G4PVPlacement(0,G4ThreeVector(0,0,52.17*cm),fHGCWindowLogical,"HGCExitPhys",fHGCLogical,false,43,checkOverlaps);
   //mirror
   auto HGCMirrorSolid = new G4Box("HGCMirrorBox",1.0*m,1.0*m,0.15*cm);
   auto fHGCMirrorLogical = new G4LogicalVolume(HGCMirrorSolid,sio2,"HGCMirrorLogical");
-  new G4PVPlacement(0,G4ThreeVector(0,0,45*cm),fHGCMirrorLogical,"HGCMirrorPhys",fHGCLogical,false,0,checkOverlaps);
+  new G4PVPlacement(0,G4ThreeVector(0,0,45*cm),fHGCMirrorLogical,"HGCMirrorPhys",fHGCLogical,false,42,checkOverlaps);
   fHGCLogical->SetVisAttributes(purple);
 
   // Aerogel Cerenkov -----------------------------------------------------
@@ -255,24 +313,24 @@ G4VPhysicalVolume* PADetectorConstruction::Construct(){
     = new G4Box("AGCBox",1.0*m,1.0*m,13.195*cm); //detector including air gap
   auto fAGCLogical
     = new G4LogicalVolume(AGCSolid,air,"AGCLogical");
-  new G4PVPlacement(0,G4ThreeVector(0.,0.,(fAGC_cm+13.195)*cm),fAGCLogical,
+  new G4PVPlacement(0,G4ThreeVector(0.,0.,fAGC_cm*cm),fAGCLogical,
                     "AGCPhys",SHMSLogical,
-                    false,0,checkOverlaps);
+                    false,50,checkOverlaps);
   auto AGCTraySolid = new G4Box("AGCTrayBox",1.0*m,1.0*m,4.5*cm);
   auto fAGCTrayLogical = new G4LogicalVolume(AGCTraySolid,aerogel,"AGCTrayLogical");
   new G4PVPlacement(0,G4ThreeVector(0,0,-8.63*cm),fAGCTrayLogical,
 		  "AGCTrayPhys",fAGCLogical, 
-		  false,0,checkOverlaps);
-  auto AGCEntranceSolid = new G4Box("AGCEntranceBox",1.0*m,1.0*m,0.013*cm);
+		  false,52,checkOverlaps);
+  auto AGCEntranceSolid = new G4Box("AGCEntranceBox",1.0*m,1.0*m,0.065*cm);
   auto fAGCEntranceLogical = new G4LogicalVolume(AGCEntranceSolid,aluminum,"AGCEntranceLogical");
   new G4PVPlacement(0,G4ThreeVector(0,0,-13.13*cm),fAGCEntranceLogical,
 		  "AGCEntrancePhys",fAGCLogical,
-		  false,0,checkOverlaps);
-  auto AGCExitSolid = new G4Box("AGCExitBox",1.0*m,1.0*m,0.016*cm);
+		  false,51,checkOverlaps);
+  auto AGCExitSolid = new G4Box("AGCExitBox",1.0*m,1.0*m,0.08*cm);
   auto fAGCExitLogical = new G4LogicalVolume(AGCExitSolid,aluminum,"AGCExitLogical");
   new G4PVPlacement(0,G4ThreeVector(0,0,13.115*cm),fAGCExitLogical,
 		  "AGCExitPhys",fAGCLogical,
-		  false,0,checkOverlaps);
+		  false,53,checkOverlaps);
  fAGCTrayLogical->SetVisAttributes(blue);
 
 
@@ -288,18 +346,20 @@ G4VPhysicalVolume* PADetectorConstruction::Construct(){
     = new G4LogicalVolume(S2YSolid,quartz,"S2YLogical");
   fS2XLogical->SetVisAttributes(red);
   fS2YLogical->SetVisAttributes(red);
+  fS2XLogical->SetUserLimits(hodoStepLimit);
+  fS2YLogical->SetUserLimits(hodoStepLimit);
   new G4PVPlacement(0,G4ThreeVector(0.,0.,fS2X_cm*cm),fS2XLogical,
                      "S2XPhysical",SHMSLogical,
-                     false,0,checkOverlaps);
+                     false,3,checkOverlaps);
   new G4PVPlacement(0,G4ThreeVector(0.,0.,fS2Y_cm*cm),fS2YLogical,
                      "S2YPhysical",SHMSLogical,
-                     false,0,checkOverlaps);
+                     false,4,checkOverlaps);
   
   
   // Calorimeter ---------------------------------------------------------
   auto CalSolid
     = new G4Box("CalBox",1.0*m,1.0*m,1.0*m);
-  auto fCalLogical
+  fCalLogical
     = new G4LogicalVolume(CalSolid,leadglass,"CalLogical");
   fCalLogical->SetVisAttributes(yellow);
   new G4PVPlacement(0,G4ThreeVector(0.,0.,fCal_cm*cm),fCalLogical,
@@ -340,7 +400,6 @@ void PADetectorConstruction::ConstructSD()
   auto hodoscope2y = new PAHodoscopeSD(SDname="/S2Y");
   sdManager->AddNewDetector(hodoscope2y);
   fS2YLogical->SetSensitiveDetector(hodoscope2y);
-  
 
 }
 
@@ -348,8 +407,8 @@ void PADetectorConstruction::ConstructSD()
 //read the NGC option
 void PADetectorConstruction::ReadParameters(const char* file){
         //define file contents
-        char* keylist[] = { (char*) "Use-NGC:", NULL}; //only NGC option
-        enum {ENGC, ENULL};
+        char* keylist[] = { (char*) "Use-NGC:", (char*) "Aero-Tray:", NULL};
+        enum {ENGC, EAERO, ENULL};
         G4int ikey, iread;
         G4int ierr = 0;
         char line[256];
@@ -376,6 +435,11 @@ void PADetectorConstruction::ReadParameters(const char* file){
         case ENGC: //dimensions of main target vessel
             iread = sscanf(line,"%*s%d", //line contains text, one integer
                            &fUseNGC); //assign to this variable
+            if( iread != 1) ierr++;
+            break;
+        case EAERO: //dimensions of main target vessel
+            iread = sscanf(line,"%*s%d", //line contains text, one integer
+                           &fAeroTray); //assign to this variable
             if( iread != 1) ierr++;
             break;
             }
@@ -407,7 +471,6 @@ void PADetectorConstruction::ConstructMaterials()
   // Kapton
   nistManager->FindOrBuildMaterial("G4_KAPTON");
   // LH2
-  new G4Material("LH2", 1.,1.00794*g/mole,0.0708*g/cm3); //density of liquid h2 at cryo temp
   // PVT scintillator
   nistManager->FindOrBuildMaterial("G4_PLASTIC_SC_VINYLTOLUENE"); //PVT
   // Tedlar
@@ -416,10 +479,26 @@ void PADetectorConstruction::ConstructMaterials()
   nistManager->BuildMaterialWithNewDensity("SiO2","G4_SILICON_DIOXIDE",2.20*g/cm3);
   // Quartz for S2Y
   G4Material* Quartz = nistManager->BuildMaterialWithNewDensity("Quartz","G4_SILICON_DIOXIDE",2.65*g/cm3);
-  // Silicon Aerogel
-  G4Material* aero = nistManager->BuildMaterialWithNewDensity("SiAerogel","G4_SILICON_DIOXIDE",0.143*g/cm3);
   // Lead glass material for calorimeter
   nistManager->FindOrBuildMaterial("G4_GLASS_LEAD");
+
+
+  G4double aeroDensity = 0.143;
+    if (fAeroTray == 11){
+	    aeroDensity = 0.052;
+    } else if (fAeroTray == 15){
+	    aeroDensity = 0.071;
+    } else if (fAeroTray == 20){
+	    aeroDensity = 0.095;
+    } else if (fAeroTray == 30){
+	    //no change, continue
+    } else {
+	   G4cout<<"Invalid Aero-Tray option. Defaulting to n=1.30"<<G4endl;
+	   //no change, continue
+    }
+
+  // Silicon Aerogel
+  G4Material* aero = nistManager->BuildMaterialWithNewDensity("SiAerogel","G4_SILICON_DIOXIDE",aeroDensity*g/cm3);
   
 
   //custom build materials: 
@@ -441,36 +520,56 @@ void PADetectorConstruction::ConstructMaterials()
   G4Material* HeavyGas = new G4Material("C4F10",0.0112*g/cm3,2);
   HeavyGas->AddElement(elC,4);
   HeavyGas->AddElement(elF,10);
-  G4Material* NobleGas = new G4Material("NobleGas",0.0025*g/cm3,2);
+  G4Material* NobleGas = new G4Material("NobleGas",0.0015*g/cm3,2);
   NobleGas->AddElement(elAr,70.*perCent);
   NobleGas->AddElement(elNe,30.*perCent);
   //Rohacell
-  G4Material* RohaCell = new G4Material("RohaCell",0.1105*g/cm3,4);
+  G4Material* RohaCell = new G4Material("RohaCell",0.110*g/cm3,4);
   RohaCell->AddElement(elC,4);
   RohaCell->AddElement(elH,7);
   RohaCell->AddElement(elN,1);
   RohaCell->AddElement(elO,1);
+  //Drift chamber gas
   G4Material* DriftGas = new G4Material("DriftGas",0.00154*g/cm3,2);
   DriftGas->AddElement(elAr,50.*perCent);
   DriftGas->AddMaterial(ethane,50.*perCent);
+  //Liquid hydrogen
+  G4Material* lH2 = new G4Material("LH2",0.0723*g/cm3,1,kStateLiquid,19*kelvin); //density of liquid h2 at cryo temp
+  lH2->AddElement(elH,2);
 
   //manual definition of refractive index as function of light energy  
   G4double energy[4] = {0.77*eV,1.03*eV,1.55*eV,2.07*eV}; 
+  G4double energy2[4] = {0.77*eV,1.55*eV,3.1*eV,6.9*eV}; //1600,800,400,180; 
     //corresponds to wavelengths of 1600, 1200, 800, 600
     //refractive indices:
-    G4double nAGC[4] = {1.03,1.03,1.03,1.03};
-    G4double nHGC[4] = {1.06,1.06,1.06,1.06};
+    G4double nHGC[4] = {1.0014,1.0014,1.0014,1.0015};
     G4double nNGC[4] = {1.0001,1.0001,1.0001,1.0001};
     G4double nQuartz[4] = {1.457,1.453,1.447,1.443};//quartz defined from
     //https://www.researchgate.net/figure/Refractive-indices-of-quartz-glass-calculated-by-the-Sellmeier-approximation-with-an_fig12_345357798
 
+    //change AGC based on which tray is used
+    G4double nAGC[4] = {1.30, 1.30, 1.30, 1.30};
+    if (fAeroTray == 11){
+	for (int i=0; i<4; i++){ nAGC[i]=1.011; }
+    } else if (fAeroTray == 15){
+	for (int i=0; i<4; i++){ nAGC[i]=1.015; }
+    } else if (fAeroTray == 20){
+	for (int i=0; i<4; i++){ nAGC[i]=1.020; }
+    } else if (fAeroTray == 30){
+	    //for (int i=0; i<4; i++){ nAGC[i]=1.030; }
+	    //nAGC[4] = {1.030,1.030,1.030,1.030};
+	    //no change, continue
+    } else {
+	   G4cout<<"Invalid Aero-Tray option. Defaulting to n=1.30"<<G4endl;
+    }
+    
     //assign to relevant materials via material properties table class
     G4MaterialPropertiesTable *mptAGC = new G4MaterialPropertiesTable();
     mptAGC->AddProperty("RINDEX", energy, nAGC, 4);
     aero->SetMaterialPropertiesTable(mptAGC);
     
     G4MaterialPropertiesTable *mptHGC = new G4MaterialPropertiesTable();
-    mptHGC->AddProperty("RINDEX", energy, nHGC, 4);
+    mptHGC->AddProperty("RINDEX", energy2, nHGC, 4);
     HeavyGas->SetMaterialPropertiesTable(mptHGC);
     
     G4MaterialPropertiesTable *mptNGC = new G4MaterialPropertiesTable();

@@ -28,7 +28,10 @@
 PASteppingAction::PASteppingAction()
 : G4UserSteppingAction(),
   fVerbose(0)
-{}
+{
+	//initialize NPE to zero for first step
+	NPE=0;
+}
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 PASteppingAction::~PASteppingAction()
@@ -58,7 +61,10 @@ void PASteppingAction::UserSteppingAction(const G4Step* step)
   //find where primary track ends, if it is stopped before the calorimeter
   if (track->GetTrackStatus()==fStopAndKill && track->GetParentID()==0){
 	  if (logV->GetName()!="CalLogical"){
-		G4cout<<"Track stopped in "<<logV->GetName()<<G4endl;
+		//output volume in which track stops
+		//for spreadsheet validation
+		G4int copyNo = startPoint->GetTouchable()->GetVolume()->GetCopyNo();
+		analysisManager->FillNtupleIColumn(9, copyNo);
 	  }
   }
 
@@ -70,10 +76,6 @@ void PASteppingAction::UserSteppingAction(const G4Step* step)
      const std::vector<const G4Track*>* secondaries =
                                 step->GetSecondaryInCurrentStep();
 
-    //if new track, reset NPE
-    if (step->IsFirstStepInVolume()){
-    	    NPE = 0;
-    }
     //count NPE this step
     G4int npe_temp = 0;
     for (auto sec : *secondaries) {
@@ -84,10 +86,15 @@ void PASteppingAction::UserSteppingAction(const G4Step* step)
        }
     }
     //add to total NPE
+    //G4cout<<NPE<<"  "<<npe_temp;
     NPE+=npe_temp;
+    //G4cout<<" "<<NPE<<G4endl;
     //fill ntuple with total number of photoelectrons 
     if (step->IsLastStepInVolume()){
     	analysisManager->FillNtupleIColumn(8,NPE);
+	NPE=0; //reset for next track
+	//using IsFirstStepInVolume() does not work for whatever reason
+	//this is the workaround
     }
   }
 

@@ -91,7 +91,7 @@ void PAEventAction::EndOfEventAction(const G4Event* event)
  
    
   // Fill Ntuple: Hodoscopes hits
-  for (G4int iDet = 0; iDet < kDim; ++iDet) {
+  for (G4int iDet = 0; iDet < 4; ++iDet) {
     auto hc = GetHC(event, fHodHCID[iDet]);
     if ( ! hc ) return;
 

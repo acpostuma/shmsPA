@@ -43,6 +43,7 @@ class PAHodoscopeHit : public G4VHit
     G4double GetTime() const { return fTime; }
     
     void SetEdep(G4double val) { fEdep = val; }
+    void AddEdep(G4double val) { fEdep += val; }
     G4double GetEdep() const { return fEdep; }
 
     void SetPos(G4ThreeVector xyz) { fPos = xyz; }

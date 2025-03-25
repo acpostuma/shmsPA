@@ -1,5 +1,16 @@
-##macro file for calculation of proton abs
+##macro file for calculation of missed tracks correction
 /run/initialize
-/PA/generator/momentum 5 GeV
+##use real kinematics
 /PA/generator/useGenerated true
-/run/beamOn 200
+/PA/generator/setInFile run5055kine.txt
+#turn of pion, kaon decay: included in SIMC
+/process/inactivate Decay pi+
+/process/inactivate Decay kaon+
+/run/physicsModified
+
+##specify particle type, central momentum, and output file name
+/gun/particle proton
+/PA/generator/momentum 5 GeV
+/analysis/setFileName proton5GeV10000.root
+/run/beamOn 10000
+

@@ -44,9 +44,11 @@ class PADetectorConstruction : public G4VUserDetectorConstruction
     G4LogicalVolume* fS2YLogical;
     G4LogicalVolume* fS1XLogical;
     G4LogicalVolume* fS1YLogical;
+    G4LogicalVolume* fCalLogical;
     G4VPhysicalVolume* fSHMSPhys;
 
     G4int fUseNGC;
+    G4int fAeroTray;
 
 };
 

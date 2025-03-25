@@ -135,7 +135,7 @@ std::vector<G4AttValue>* PAHodoscopeHit::CreateAttValues() const
 
 void PAHodoscopeHit::Print()
 {
-  G4cout << fEdep/keV << " (keV) " << fTime/ns << " (nsec)" << G4endl;
+  G4cout << fEdep/keV << " (keV) " << fTime/ns << " (nsec)" << fId << G4endl;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
