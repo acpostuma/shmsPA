@@ -44,6 +44,7 @@ G4bool PAHodoscopeSD::ProcessHits(G4Step* step, G4TouchableHistory*)
 {
   auto edep = step->GetTotalEnergyDeposit();
   if (edep==0.) return true;
+
   
   auto preStepPoint = step->GetPreStepPoint();
   auto touchable = preStepPoint->GetTouchable();
@@ -51,9 +52,6 @@ G4bool PAHodoscopeSD::ProcessHits(G4Step* step, G4TouchableHistory*)
   auto hitTime = preStepPoint->GetGlobalTime();
 
 
-  //for debugging purposes
-  //G4cout<<edep/keV<<"  "<<copyNo<<"  "<<hitTime<<G4endl;
- 
   // check if this hodoscope already has a hit
   auto ix = -1;
   for (auto i=0;i<fHitsCollection->entries();i++) {

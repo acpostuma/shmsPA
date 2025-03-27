@@ -32,7 +32,7 @@ void PAActionInitialization::Build() const
   auto eventAction = new PAEventAction;
   SetUserAction(eventAction);
   
-  auto steppingAction = new PASteppingAction;
+  auto steppingAction = new PASteppingAction(eventAction);
   SetUserAction(steppingAction);
 
   SetUserAction(new PARunAction(eventAction));

@@ -44,14 +44,14 @@ target_link_libraries(shmsPA ${Geant4_LIBRARIES})
 set(PA_SCRIPTS
   exampleB5.in 
   exampleB5.out 
-  icons.mac
-  gui.mac
+  macros/icons.mac
+  macros/gui.mac
   run.png
-  init.mac 
-  init_vis.mac 
-  run1.mac 
-  run2.mac 
-  vis.mac
+  macros/init.mac 
+  macros/init_vis.mac 
+  macros/run1.mac 
+  macros/run2.mac 
+  macros/vis.mac
   )
 
 foreach(_script ${PA_SCRIPTS})

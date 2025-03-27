@@ -15,6 +15,8 @@
 
 #include "G4UImanager.hh"
 #include "FTFP_BERT.hh"
+#include "FTFP_BERT_ATL.hh"
+#include "QGSP_BIC.hh"
 #include "QGSP_BERT.hh"
 #include "G4PhysListFactory.hh"
 #include "G4StepLimiterPhysics.hh"
@@ -39,6 +41,12 @@ int main(int argc,char** argv)
     ui = new G4UIExecutive(argc, argv);
   }
 
+  //fix random seed bs
+  G4Random::setTheEngine(new CLHEP::RanecuEngine());
+  G4long seed = time(NULL);
+  CLHEP::HepRandom::setTheSeed(seed); 
+  G4Random::setTheSeed(seed);
+
   // Construct the default run manager
   //
 #ifdef G4MULTITHREADED
@@ -50,7 +58,7 @@ int main(int argc,char** argv)
   // Mandatory user initialization classes
   runManager->SetUserInitialization(new PADetectorConstruction);
 
-  auto physicsList = new FTFP_BERT; //currrent default
+  auto physicsList = new FTFP_BERT; 
   physicsList->RegisterPhysics(new G4StepLimiterPhysics());
   //add optical and low energy electromagnetic models
   physicsList->RegisterPhysics(new G4OpticalPhysics()); //optical photons: want Cherenkov
@@ -77,9 +85,9 @@ int main(int argc,char** argv)
     UImanager->ApplyCommand(command+fileName);
   }
   else {
-    UImanager->ApplyCommand("/control/execute init_vis.mac");
+    UImanager->ApplyCommand("/control/execute macros/init_vis.mac");
     if (ui->IsGUI()) {
-         UImanager->ApplyCommand("/control/execute gui.mac");
+         UImanager->ApplyCommand("/control/execute macros/gui.mac");
     }     
     // start interactive session
     ui->SessionStart();

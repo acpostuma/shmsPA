@@ -5,7 +5,7 @@
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 #include "PASteppingAction.hh"
-//#include "EventAction.hh"
+#include "PAEventAction.hh"
 #include "G4Run.hh"
 
 #include "G4Cerenkov.hh"
@@ -25,12 +25,10 @@
 #include "G4SystemOfUnits.hh"
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-PASteppingAction::PASteppingAction()
-: G4UserSteppingAction(),
+PASteppingAction::PASteppingAction(PAEventAction* evt)
+: G4UserSteppingAction(), fEventAction(evt),
   fVerbose(0)
 {
-	//initialize NPE to zero for first step
-	NPE=0;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -42,6 +40,12 @@ void PASteppingAction::UserSteppingAction(const G4Step* step)
 {
   static G4ParticleDefinition* opticalphoton = 
               G4OpticalPhoton::OpticalPhotonDefinition();
+
+  //initialize NPE to zero at beginning of step
+  S2YNPE=0;
+  AGCNPE=0;
+  HGCNPE=0;
+  NGCNPE=0;
   
   G4AnalysisManager* analysisManager = G4AnalysisManager::Instance();
 
@@ -51,7 +55,6 @@ void PASteppingAction::UserSteppingAction(const G4Step* step)
 
   G4String particleName = track->GetDynamicParticle()->
                                  GetParticleDefinition()->GetParticleName();
-
 
 
 
@@ -68,36 +71,71 @@ void PASteppingAction::UserSteppingAction(const G4Step* step)
 	  }
   }
 
-  //ONLY if in the particle is in S2Y
-  //count one level of secondaries, not arbitrary amounts
-  if (logV->GetName()=="S2YLogical" && track->GetParentID()==0){
-
+  //Cherenkov photon counting
+  //S2Y
+  if (logV->GetName()=="S2YLogical" && particleName!="opticalphoton"){
     // loop over secondaries, create statistics
-     const std::vector<const G4Track*>* secondaries =
+    const std::vector<const G4Track*>* secondaries =
                                 step->GetSecondaryInCurrentStep();
-
     //count NPE this step
-    G4int npe_temp = 0;
+    for (auto sec : *secondaries) {
+       if (sec->GetDynamicParticle()->GetParticleDefinition() == opticalphoton){
+          if (sec->GetCreatorProcess()->GetProcessName().compare("Cerenkov")==0){
+		S2YNPE+=1;
+          }
+        }
+      }
+  }
+
+  //AGC
+  if (logV->GetName()=="AGCTrayLogical" && particleName!="opticalphoton"){
+    // loop over secondaries, create statistics
+    const std::vector<const G4Track*>* secondaries =
+                                step->GetSecondaryInCurrentStep();
     for (auto sec : *secondaries) {
       if (sec->GetDynamicParticle()->GetParticleDefinition() == opticalphoton){
         if (sec->GetCreatorProcess()->GetProcessName().compare("Cerenkov")==0){
-		npe_temp+=1;
+		AGCNPE+=1;
         }
        }
     }
-    //add to total NPE
-    //G4cout<<NPE<<"  "<<npe_temp;
-    NPE+=npe_temp;
-    //G4cout<<" "<<NPE<<G4endl;
-    //fill ntuple with total number of photoelectrons 
-    if (step->IsLastStepInVolume()){
-    	analysisManager->FillNtupleIColumn(8,NPE);
-	NPE=0; //reset for next track
-	//using IsFirstStepInVolume() does not work for whatever reason
-	//this is the workaround
+  }
+  
+  if (logV->GetName()=="NGCLogical" && particleName!="opticalphoton"){
+    // loop over secondaries, create statistics
+    const std::vector<const G4Track*>* secondaries =
+                                step->GetSecondaryInCurrentStep();
+    for (auto sec : *secondaries) {
+      if (sec->GetDynamicParticle()->GetParticleDefinition() == opticalphoton){
+        if (sec->GetCreatorProcess()->GetProcessName().compare("Cerenkov")==0){
+		NGCNPE+=1;
+        }
+       }
+    }
+  }
+  
+  if (logV->GetName()=="HGCLogical" && particleName!="opticalphoton"){
+    // loop over secondaries, create statistics
+    const std::vector<const G4Track*>* secondaries =
+                                step->GetSecondaryInCurrentStep();
+    for (auto sec : *secondaries) {
+      if (sec->GetDynamicParticle()->GetParticleDefinition() == opticalphoton){
+        if (sec->GetCreatorProcess()->GetProcessName().compare("Cerenkov")==0){
+		HGCNPE+=1;
+        }
+       }
     }
   }
 
+  if (logV->GetName()=="CalLogical"){
+	  edep = step->GetTotalEnergyDeposit();
+	  fEventAction->AddCalEnergy(edep);
+  } 
+
+  fEventAction->AddS2YNPE(S2YNPE);
+  fEventAction->AddAGCNPE(AGCNPE);
+  fEventAction->AddHGCNPE(HGCNPE);
+  fEventAction->AddNGCNPE(NGCNPE);
 
   return;
 }  

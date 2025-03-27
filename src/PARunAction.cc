@@ -37,6 +37,10 @@ PARunAction::PARunAction(PAEventAction* eventAction)
     analysisManager->CreateNtupleDColumn("S2YEnergy");    // column Id = 7
     analysisManager->CreateNtupleIColumn("S2YNPE");    // column Id = 8
     analysisManager->CreateNtupleIColumn("CopyNo");    // column Id = 9
+    analysisManager->CreateNtupleIColumn("AGCNPE");    // column Id = 10
+    analysisManager->CreateNtupleIColumn("HGCNPE");    // column Id = 11
+    analysisManager->CreateNtupleIColumn("NGCNPE");    // column Id = 12
+    analysisManager->CreateNtupleDColumn("CalEnergy");    // column Id = 13
     analysisManager->FinishNtuple();
   }
 }

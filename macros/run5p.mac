@@ -1,0 +1,13 @@
+##macro file for calculation of proton abs
+/run/initialize
+/PA/generator/useGenerated true
+/process/inactivate Decay pi+
+/process/inactivate Decay kaon+
+/run/physicsModified
+#/PA/generator/setInFile sample4.txt
+/PA/generator/momentum 5 GeV
+
+/gun/particle proton
+/analysis/setFileName out/proton5GeV10000.root
+/run/beamOn 10000
+

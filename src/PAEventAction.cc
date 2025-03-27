@@ -1,4 +1,5 @@
 #include "PAEventAction.hh"
+#include "PASteppingAction.hh"
 #include "PAHodoscopeHit.hh"
 #include "PAConstants.hh"
 #include "PAAnalysis.hh"
@@ -80,6 +81,12 @@ void PAEventAction::BeginOfEventAction(const G4Event*)
       fHodHCID[iDet]   = sdManager->GetCollectionID(hHCName[iDet]);
     }
   }
+  //initialize to zero
+  S2YNPE=0;
+  AGCNPE=0;
+  HGCNPE=0;
+  NGCNPE=0;
+  CalEnergy=0;
 }     
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -101,6 +108,14 @@ void PAEventAction::EndOfEventAction(const G4Event* event)
       analysisManager->FillNtupleDColumn(iDet+4, hit->GetEdep()); 
     }
   }
+  //Fill  Ntuple: NPE numbers 
+  analysisManager->FillNtupleIColumn(8,S2YNPE);
+  analysisManager->FillNtupleIColumn(10,AGCNPE);
+  analysisManager->FillNtupleIColumn(11,HGCNPE);
+  analysisManager->FillNtupleIColumn(12,NGCNPE);
+  analysisManager->FillNtupleDColumn(13,CalEnergy);
+  
+  //add row to Ntuple
   analysisManager->AddNtupleRow();
 
   //
