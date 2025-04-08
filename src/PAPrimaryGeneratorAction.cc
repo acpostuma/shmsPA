@@ -27,8 +27,12 @@ PAPrimaryGeneratorAction::PAPrimaryGeneratorAction()
   fProton = particleTable->FindParticle("proton");
   
   //gun particle and position: does not need to change
-  fParticleGun->SetParticlePosition(G4ThreeVector(0.,0.,-3.*m));
+  fParticleGun->SetParticlePosition(G4ThreeVector(0.,0.,ztar*m));
   fParticleGun->SetParticleDefinition(fProton);
+  //Momentum to KE:
+  G4double Ekin = sqrt(fMomentum/GeV*fMomentum/GeV + 0.938*0.938);
+  fParticleGun->SetParticleEnergy(Ekin*GeV);
+  fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0,0,1));
   
   // define commands for this class
   DefineCommands();
@@ -59,15 +63,18 @@ void PAPrimaryGeneratorAction::GeneratePrimaries(G4Event* event)
 	//get information 
 	if (!fUseGenerated){
 		//simple, consistent with /gun/ commands
-		auto pp = fMomentum;
-  		auto ekin = std::sqrt(pp*pp+mass*mass)-mass;
+		//auto pp = fMomentum;
+  		/**
+		auto ekin = std::sqrt(pp*pp+mass*mass)-mass;
 		auto Xvec = G4ThreeVector(0,0,ztar*m); //default z position
   		
 		fParticleGun->SetParticleEnergy(ekin);
 		fParticleGun->SetParticlePosition(Xvec);
   		fParticleGun->SetParticleMomentumDirection(
                   G4ThreeVector(0,0,1));
-  
+  		**/ 
+
+		//just leave the default stuff
   		fParticleGun->GeneratePrimaryVertex(event);
 	} else {
 		//and generate all the events read in from the file
@@ -89,8 +96,10 @@ void PAPrimaryGeneratorAction::GeneratePrimaries(G4Event* event)
 		fParticleGun->SetParticlePosition(Xvec);
 
 		fParticleGun->GeneratePrimaryVertex(event);
+	   //output progress statement
+	   if ((nev+1)%1000==0)G4cout<<"Processed "<<nev+1<<" events"<<G4endl;
 	   if (nev == NEVENTS-1) {
-		   G4cout<< "end of generated events"<<G4endl;
+		   G4cout<< "End of generated events"<<G4endl;
 		   return;
 	   }
 	}

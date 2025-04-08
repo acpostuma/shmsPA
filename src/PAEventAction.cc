@@ -53,7 +53,7 @@ PAEventAction::PAEventAction()
       // and inner braces for the C array
 {
   // set printing per each event
-  G4RunManager::GetRunManager()->SetPrintProgress(1);
+  G4RunManager::GetRunManager()->SetPrintProgress(0);
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -119,8 +119,8 @@ void PAEventAction::EndOfEventAction(const G4Event* event)
   analysisManager->AddNtupleRow();
 
   //
-  // Print diagnostics
-  // 
+  // Print diagnostics: for debugging purposes
+  /**
   
   auto printModulo = G4RunManager::GetRunManager()->GetPrintProgress();
   if ( printModulo == 0 || event->GetEventID() % printModulo != 0) return;
@@ -141,6 +141,7 @@ void PAEventAction::EndOfEventAction(const G4Event* event)
       hc->GetHit(i)->Print();
     }
   }
+  ***/
 
 }
 

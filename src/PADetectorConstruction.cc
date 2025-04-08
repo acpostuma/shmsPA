@@ -483,22 +483,7 @@ void PADetectorConstruction::ConstructMaterials()
   nistManager->FindOrBuildMaterial("G4_GLASS_LEAD");
 
 
-  G4double aeroDensity = 0.143;
-    if (fAeroTray == 11){
-	    aeroDensity = 0.052;
-    } else if (fAeroTray == 15){
-	    aeroDensity = 0.071;
-    } else if (fAeroTray == 20){
-	    aeroDensity = 0.095;
-    } else if (fAeroTray == 30){
-	    //no change, continue
-    } else {
-	   G4cout<<"Invalid Aero-Tray option. Defaulting to n=1.30"<<G4endl;
-	   //no change, continue
-    }
 
-  // Silicon Aerogel
-  G4Material* aero = nistManager->BuildMaterialWithNewDensity("SiAerogel","G4_SILICON_DIOXIDE",aeroDensity*g/cm3);
   
 
   //custom build materials: 
@@ -548,20 +533,24 @@ void PADetectorConstruction::ConstructMaterials()
     //https://www.researchgate.net/figure/Refractive-indices-of-quartz-glass-calculated-by-the-Sellmeier-approximation-with-an_fig12_345357798
 
     //change AGC based on which tray is used
-    G4double nAGC[4] = {1.30, 1.30, 1.30, 1.30};
+    G4double nAGC[4] = {1.030, 1.030, 1.030, 1.030};
+    G4double aeroDensity = 0.143;
     if (fAeroTray == 11){
 	for (int i=0; i<4; i++){ nAGC[i]=1.011; }
+	aeroDensity = 0.052;
     } else if (fAeroTray == 15){
 	for (int i=0; i<4; i++){ nAGC[i]=1.015; }
+	aeroDensity = 0.071;
     } else if (fAeroTray == 20){
 	for (int i=0; i<4; i++){ nAGC[i]=1.020; }
+	aeroDensity = 0.095;
     } else if (fAeroTray == 30){
-	    //for (int i=0; i<4; i++){ nAGC[i]=1.030; }
-	    //nAGC[4] = {1.030,1.030,1.030,1.030};
-	    //no change, continue
+	//no change, continue
     } else {
-	   G4cout<<"Invalid Aero-Tray option. Defaulting to n=1.30"<<G4endl;
+	G4cout<<"Invalid Aero-Tray option. Defaulting to n=1.30"<<G4endl;
     }
+   // Silicon Aerogel
+   G4Material* aero = nistManager->BuildMaterialWithNewDensity("SiAerogel","G4_SILICON_DIOXIDE",aeroDensity*g/cm3);
     
     //assign to relevant materials via material properties table class
     G4MaterialPropertiesTable *mptAGC = new G4MaterialPropertiesTable();

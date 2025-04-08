@@ -1,1 +1,6 @@
-Use-NGC: 1
+## SHMS detector parameters
+## NGC on/off 
+Use-NGC: 0
+## Which aerogel tray: 11, 15, 20, 30
+## Option 11 for n=1.011, etc.
+Aero-Tray: 11
