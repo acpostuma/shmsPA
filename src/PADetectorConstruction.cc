@@ -44,7 +44,7 @@ PADetectorConstruction::PADetectorConstruction()
 
 {
 	fUseNGC=0;
-	fAeroTray=1;
+	fAeroTray=10;
 	ReadParameters("detectors.dat");
 	ConstructMaterials();
 }
@@ -122,7 +122,7 @@ G4VPhysicalVolume* PADetectorConstruction::Construct(){
     = new G4Box("worldBox",10.*m,10.*m,10.*m); //large box, half-length in xyz
   auto worldLogical
     = new G4LogicalVolume(worldSolid,air,"worldLogical");
-  worldLogical->SetVisAttributes(G4VisAttributes::Invisible);
+  worldLogical->SetVisAttributes(G4VisAttributes::GetInvisible());
   auto worldPhysical
     = new G4PVPlacement(0,G4ThreeVector(),worldLogical,"worldPhysical",0,
                         false,0,checkOverlaps);
@@ -134,7 +134,7 @@ G4VPhysicalVolume* PADetectorConstruction::Construct(){
     = new G4Box("SHMSBox",2.*m,2.*m,10.*m); //z is beam axis
   auto SHMSLogical
     = new G4LogicalVolume(SHMSSolid,vacuum,"SHMSLogical");
-  SHMSLogical->SetVisAttributes(G4VisAttributes::Invisible);
+  SHMSLogical->SetVisAttributes(G4VisAttributes::GetInvisible());
   fSHMSPhys
     = new G4PVPlacement(0,G4ThreeVector(0,0,0.*m),SHMSLogical,
                         "fSHMSPhys",worldLogical,

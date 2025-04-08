@@ -3,6 +3,7 @@
 
 #include "G4VUserPrimaryGeneratorAction.hh"
 #include "globals.hh"
+#include <vector>
 
 class G4ParticleGun;
 class G4GenericMessenger;

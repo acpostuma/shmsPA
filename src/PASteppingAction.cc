@@ -19,7 +19,7 @@
 #include "G4EventManager.hh"
 #include "G4SteppingManager.hh"
 #include "G4RunManager.hh"
-#include "PAAnalysis.hh"
+#include "G4AnalysisManager.hh"
 #include "G4ProcessManager.hh"
 
 #include "G4SystemOfUnits.hh"

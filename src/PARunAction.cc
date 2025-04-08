@@ -1,6 +1,6 @@
 #include "PARunAction.hh"
 #include "PAEventAction.hh"
-#include "PAAnalysis.hh"
+#include "G4AnalysisManager.hh"
 
 #include "G4Run.hh"
 #include "G4UnitsTable.hh"
@@ -13,16 +13,11 @@ PARunAction::PARunAction(PAEventAction* eventAction)
    fEventAction(eventAction)
 { 
   // Create analysis manager
-  // The choice of analysis technology is done via selectin of a namespace
-  // in PAAnalysis.hh
   auto analysisManager = G4AnalysisManager::Instance();
-  G4cout << "Using " << analysisManager->GetType() << G4endl;
 
   // Default settings
-  analysisManager->SetNtupleMerging(true);
-     // Note: merging ntuples is available only with Root output
   analysisManager->SetVerboseLevel(1);
-  analysisManager->SetFileName("PAOutData"); //default, can overwrite in macro
+  analysisManager->SetFileName("PAOutData.root"); //default, can overwrite in macro
 
   // Creating ntuple
   if ( fEventAction ) {
@@ -49,7 +44,6 @@ PARunAction::PARunAction(PAEventAction* eventAction)
 
 PARunAction::~PARunAction()
 {
-  delete G4AnalysisManager::Instance();  
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

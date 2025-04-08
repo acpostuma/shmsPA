@@ -2,10 +2,10 @@
 #include "PASteppingAction.hh"
 #include "PAHodoscopeHit.hh"
 #include "PAConstants.hh"
-#include "PAAnalysis.hh"
 
 #include "G4Event.hh"
 #include "G4RunManager.hh"
+#include "G4AnalysisManager.hh"
 #include "G4EventManager.hh"
 #include "G4HCofThisEvent.hh"
 #include "G4VHitsCollection.hh"

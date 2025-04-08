@@ -116,8 +116,8 @@ std::vector<G4AttValue>* PAHodoscopeHit::CreateAttValues() const
     ->push_back(G4AttValue("HitType","HodoscopeHit",""));
   values
     ->push_back(G4AttValue("ID",G4UIcommand::ConvertToString(fId),""));
-  values->push_back(G4AttValue("Time",fTime/ns,""));
-  values->push_back(G4AttValue("Edep",fEdep/keV,""));
+  values->push_back(G4AttValue("Time",G4BestUnit(fTime,"Time"),""));
+  values->push_back(G4AttValue("Edep",G4BestUnit(fEdep,"Edep"),""));
   values
     ->push_back(G4AttValue("Pos",G4BestUnit(fPos,"Length"),""));
   
