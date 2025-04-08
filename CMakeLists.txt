@@ -42,11 +42,9 @@ target_link_libraries(shmsPA ${Geant4_LIBRARIES})
 # relies on these scripts being in the current working directory.
 #
 set(PA_SCRIPTS
-  exampleB5.in 
-  exampleB5.out 
   macros/icons.mac
   macros/gui.mac
-  run.png
+  macros/run.png
   macros/init.mac 
   macros/init_vis.mac 
   macros/run1.mac 

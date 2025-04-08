@@ -6,7 +6,7 @@
 #
 # Add icons of general interest
 #
-/control/execute icons.mac
+/control/execute macros/icons.mac
 #
 # File menu :
 /gui/addMenu file File
@@ -40,4 +40,4 @@
 /gui/addButton viewer "Update scene" "/vis/scene/notifyHandlers"
 #
 # User defined icon :
-/gui/addIcon "Run beam on" user_icon "/run/beamOn 1" run.png 
+/gui/addIcon "Run beam on" user_icon "/run/beamOn 1" macros/run.png 
