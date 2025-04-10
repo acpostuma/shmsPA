@@ -128,12 +128,12 @@ G4VPhysicalVolume* PADetectorConstruction::Construct(){
                         false,0,checkOverlaps);
   
   
-  // SHMS spectrometer as a whole: put in vacuum
+  // SHMS spectrometer as a whole: also air
   // will include HB entrance and dipole exit
   auto SHMSSolid 
     = new G4Box("SHMSBox",2.*m,2.*m,10.*m); //z is beam axis
   auto SHMSLogical
-    = new G4LogicalVolume(SHMSSolid,vacuum,"SHMSLogical");
+    = new G4LogicalVolume(SHMSSolid,air,"SHMSLogical");
   SHMSLogical->SetVisAttributes(G4VisAttributes::GetInvisible());
   fSHMSPhys
     = new G4PVPlacement(0,G4ThreeVector(0,0,0.*m),SHMSLogical,
